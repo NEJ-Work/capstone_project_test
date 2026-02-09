@@ -1,0 +1,57 @@
+# Tempo (standalone) - Lab Configuration
+# Chart: tempo 1.10.3
+
+tempo:
+  # Tempo configuration
+  tempo:
+    # Enable metrics generator
+    metricsGenerator:
+      enabled: true
+      # prometheus chart server service name
+      remoteWriteUrl: "http://prometheus-server.monitoring.svc:80/api/v1/write"
+
+    # Retention
+    retention: 48h
+
+    # Receivers
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: "0.0.0.0:4317"
+          http:
+            endpoint: "0.0.0.0:4318"
+
+    # Storage - local filesystem for lab
+    storage:
+      trace:
+        backend: local
+        local:
+          path: /var/tempo/traces
+        wal:
+          path: /var/tempo/wal
+
+  # Persistence
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClassName: gp3
+
+  # Resources (sized for lab)
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  # Service
+  service:
+    type: ClusterIP
+
+  # ServiceMonitor for Prometheus
+  serviceMonitor:
+    enabled: true
+    labels:
+      release: prometheus

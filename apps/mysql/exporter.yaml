@@ -1,0 +1,113 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-exporter-config
+  namespace: mysql
+data:
+  .my.cnf: |
+    [client]
+    user=exporter
+    password=exporterpassword
+    host=mysql
+    port=3306
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-exporter
+  namespace: mysql
+  labels:
+    app: mysql-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-exporter
+  template:
+    metadata:
+      labels:
+        app: mysql-exporter
+      annotations:
+        # For Prometheus service discovery
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9104"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+        - name: mysql-exporter
+          image: prom/mysqld-exporter:v0.15.1
+          ports:
+            - containerPort: 9104
+              name: metrics
+          args:
+            - --config.my-cnf=/etc/mysql-exporter/.my.cnf
+            - --collect.info_schema.processlist
+            - --collect.info_schema.innodb_metrics
+            - --collect.global_status
+            - --collect.global_variables
+            - --collect.slave_status
+            - --collect.engine_innodb_status
+          volumeMounts:
+            - name: config
+              mountPath: /etc/mysql-exporter
+              readOnly: true
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 9104
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 9104
+            initialDelaySeconds: 5
+            periodSeconds: 5
+      volumes:
+        - name: config
+          configMap:
+            name: mysql-exporter-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-exporter
+  namespace: mysql
+  labels:
+    app: mysql-exporter
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9104
+      targetPort: 9104
+      name: metrics
+  selector:
+    app: mysql-exporter
+---
+# ServiceMonitor for Prometheus Operator
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: mysql-exporter
+  namespace: mysql
+  labels:
+    app: mysql-exporter
+    release: prometheus
+spec:
+  selector:
+    matchLabels:
+      app: mysql-exporter
+  endpoints:
+    - port: metrics
+      interval: 30s
+      path: /metrics
+  namespaceSelector:
+    matchNames:
+      - mysql

@@ -1,0 +1,61 @@
+grafana:
+  service:
+    type: LoadBalancer
+
+  adminUser: admin
+  adminPassword: admin
+
+  persistence:
+    enabled: true
+    storageClassName: gp3
+    size: 5Gi
+
+  datasources:
+    datasources.yaml:
+      apiVersion: 1
+      datasources:
+        - name: Prometheus
+          type: prometheus
+          url: http://prometheus-server.monitoring.svc:80
+          access: proxy
+          isDefault: true
+        - name: Loki
+          type: loki
+          url: http://loki.monitoring.svc:3100
+          access: proxy
+          jsonData:
+            derivedFields:
+              - name: TraceID
+                matcherRegex: "traceID=(\\w+)"
+                url: "$${__value.raw}"
+                datasourceUid: tempo
+        - name: Tempo
+          type: tempo
+          uid: tempo
+          url: http://tempo.tempo.svc:3100
+          access: proxy
+          jsonData:
+            tracesToLogsV2:
+              datasourceUid: loki
+              spanStartTimeShift: '-1h'
+              spanEndTimeShift: '1h'
+              filterByTraceID: true
+              filterBySpanID: false
+            tracesToMetrics:
+              datasourceUid: prometheus
+              spanStartTimeShift: '-1h'
+              spanEndTimeShift: '1h'
+            nodeGraph:
+              enabled: true
+            serviceMap:
+              datasourceUid: prometheus
+            lokiSearch:
+              datasourceUid: loki
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
