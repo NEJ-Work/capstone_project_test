@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title or "Capstone App" }}</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f6f8fa;
+        }
+        header {
+            margin-bottom: 20px;
+        }
+        a {
+            text-decoration: none;
+            color: #0366d6;
+        }
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 6px;
+            box-shadow: 0 1px 3px rgba(0,0,0,.1);
+            max-width: 800px;
+        }
+        .error {
+            color: red;
+        }
+        button {
+            padding: 6px 12px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Capstone Control Panel</h1>
+    {% if g.jwt_payload %}
+        <a href="{{ url_for('dashboard') }}">Dashboard</a> |
+        <a href="{{ url_for('logout') }}">Logout</a>
+    {% else %}
+        <a href="{{ url_for('index') }}">Home</a> |
+        <a href="{{ url_for('login') }}">Login</a>
+    {% endif %}
+</header>
+
+<div class="card">
+    {% block content %}{% endblock %}
+</div>
+
+</body>
+</html>
