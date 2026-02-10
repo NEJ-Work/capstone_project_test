@@ -1,0 +1,62 @@
+[200~{% extends "base.html" %}
+{% block content %}
+<h2>Dashboard</h2>
+
+<p><strong>User:</strong> {{ username }}</p>
+
+{% if message %}
+<p style="color: green;">{{ message }}</p>
+{% endif %}
+
+<hr>
+
+<h3>API Keys</h3>
+<ul>
+    {% for key in api_keys %}
+        <li>
+            {{ key }}
+            <form method="post" action="/api/deletekey" style="display:inline;">
+                <input type="hidden" name="api_key" value="{{ key }}">
+                <button type="submit">Delete</button>
+            </form>
+        </li>
+    {% endfor %}
+</ul>
+
+<form method="post" action="/api/newkey">
+    <button type="submit">Create New API Key</button>
+</form>
+
+<hr>
+
+<h2>Run Ansible Playbook</h2>
+<form method="POST" action="{{ url_for('run_playbook_dashboard') }}">
+    <select name="playbook">
+        {% for pb in allowed_playbooks %}
+        <option value="{{ pb }}">{{ pb }}</option>
+        {% endfor %}
+    </select>
+    <input type="text" name="extra_vars" placeholder='{"key":"value"}'>
+    <button type="submit">Run Playbook</button>
+</form>
+
+
+<h3>Change Password</h3>
+<form method="post" action="/chpasswd">
+    <input type="password" name="password" placeholder="New password" required>
+    <button type="submit">Change</button>
+</form>
+
+<hr>
+
+<h3>API Usage</h3>
+<p>
+Use these hea;'ders:
+</p>
+
+<pre>
+Username: {{ username }}
+Authorization: Bearer &lt;API_KEY&gt;
+</pre>
+
+{% endblock %}
