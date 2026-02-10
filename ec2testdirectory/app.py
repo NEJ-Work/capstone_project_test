@@ -25,6 +25,14 @@ import jwt
 import ansible_runner
 import os
 import json
+import time
+from prometheus_client import (
+    Counter,
+    Histogram,
+    Gauge,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
 
 """
 Flask
@@ -88,6 +96,27 @@ user_db = {
         "password": "a3a232a44f8017ae2d673ae57b5b132f5153d1f117e89008e2f6098f2880a2f2",  # password2
     },
 }
+
+# -----------------------
+# Prometheus Metrics
+# -----------------------
+
+ANSIBLE_JOBS_TOTAL = Counter(
+    "ansible_jobs_total",
+    "Total number of Ansible jobs",
+    ["playbook", "status", "user"],
+)
+
+ANSIBLE_JOB_DURATION = Histogram(
+    "ansible_job_duration_seconds",
+    "Duration of Ansible jobs",
+    ["playbook"],
+)
+
+ANSIBLE_JOBS_RUNNING = Gauge(
+    "ansible_jobs_running",
+    "Number of currently running Ansible jobs",
+)
 
 
 def jwt_protected(func):
@@ -173,38 +202,50 @@ def api_protected(func):
 @app.route("/api/ansible/run", methods=["POST"])
 @api_protected
 def run_ansible():
-    """
-    Run a predefined Ansible playbook against Kubernetes.
-
-    JSON body:
-    {
-        "playbook": "deploy",
-        "extra_vars": {
-            "replicas": 3
-        }
-    }
-    """
-
     body = request.json or {}
     playbook_key = body.get("playbook")
     extra_vars = body.get("extra_vars", {})
+    username = request.headers.get("Username", "unknown")
 
     if playbook_key not in ALLOWED_PLAYBOOKS:
         return jsonify({"error": "Playbook not allowed"}), 400
 
     playbook_path = ALLOWED_PLAYBOOKS[playbook_key]
 
-    r = ansible_runner.run(
-        private_data_dir=ANSIBLE_BASE_DIR,
-        playbook=playbook_path,
-        extravars=extra_vars,
-        envvars={
-            # Remove this if running inside Kubernetes
-            "KUBECONFIG": os.path.join(ANSIBLE_BASE_DIR, "kubeconfig")
-        },
-    )
+    ANSIBLE_JOBS_RUNNING.inc()
+    start_time = time.time()
 
-    return jsonify({"status": r.status, "rc": r.rc, "stats": r.stats})
+    try:
+        r = ansible_runner.run(
+            private_data_dir=ANSIBLE_BASE_DIR,
+            playbook=playbook_path,
+            extravars=extra_vars,
+            envvars={
+                "KUBECONFIG": os.path.join(ANSIBLE_BASE_DIR, "kubeconfig")
+            },
+        )
+
+        status = "successful" if r.rc == 0 else "failed"
+
+        return jsonify({
+            "status": r.status,
+            "rc": r.rc,
+            "stats": r.stats
+        })
+
+    except Exception as e:
+        status = "failed"
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        duration = time.time() - start_time
+        ANSIBLE_JOBS_RUNNING.dec()
+        ANSIBLE_JOB_DURATION.labels(playbook_key).observe(duration)
+        ANSIBLE_JOBS_TOTAL.labels(
+            playbook=playbook_key,
+            status=status,
+            user=username,
+        ).inc()
 
 
 def load_data():
@@ -304,17 +345,40 @@ def run_playbook_dashboard():
     playbook_path = ALLOWED_PLAYBOOKS[playbook_key]
 
     # Run Ansible playbook
-    r = ansible_runner.run(
-        private_data_dir=ANSIBLE_BASE_DIR,
-        playbook=playbook_path,
-        extravars=extra_vars,
-        envvars={
-            "KUBECONFIG": os.path.join(ANSIBLE_BASE_DIR, "kubeconfig")
-        },
-    )
+    ANSIBLE_JOBS_RUNNING.inc()
+    start_time = time.time()
 
-    message = f"Playbook '{playbook_key}' finished with status {r.status}, rc={r.rc}"
-    return redirect(url_for("dashboard", message=message))
+    try:
+        r = ansible_runner.run(
+            private_data_dir=ANSIBLE_BASE_DIR,
+            playbook=playbook_path,
+            extravars=extra_vars,
+            envvars={
+                "KUBECONFIG": os.path.join(ANSIBLE_BASE_DIR, "kubeconfig")
+            },
+        )
+
+        status = "successful" if r.rc == 0 else "failed"
+
+    except Exception:
+        status = "failed"
+        raise
+
+    finally:
+        duration = time.time() - start_time
+        ANSIBLE_JOBS_RUNNING.dec()
+        ANSIBLE_JOB_DURATION.labels(playbook_key).observe(duration)
+        ANSIBLE_JOBS_TOTAL.labels(
+            playbook=playbook_key,
+            status=status,
+            user=g.jwt_payload.get("username", "unknown"),
+        ).inc()
+
+@app.route("/metrics")
+def metrics():
+    return generate_latest(), 200, {
+        "Content-Type": CONTENT_TYPE_LATEST
+    }
 
 @app.route("/logout")
 def logout():
