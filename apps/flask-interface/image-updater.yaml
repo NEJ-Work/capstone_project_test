@@ -10,11 +10,11 @@ spec:
   writeBackConfig:
     method: "git"
     gitConfig:
-      repository: "https://github.com/drpowell23-del/capstone_project.git"
+      repository: "https://github.com/NEJ-Work/capstone_project_test.git"
       branch: "main"
       writeBackTarget: "kustomization:."
   applicationRefs:
     - namePattern: "flask-interface"
       images:
         - alias: "flask"
-          imageName: "drpowell23/flask-ansible:v1.x"
+          imageName: "nej22/flask-ansible:v1.x"
