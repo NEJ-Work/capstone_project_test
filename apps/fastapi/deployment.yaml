@@ -58,7 +58,7 @@ spec:
     spec:
       containers:
         - name: fastapi
-          image: drpowell23/fastapi-telemetry:latest  # Replace with your registry image
+          image: nej22/fastapi-telemetry:latest  # Replace with your registry image
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
