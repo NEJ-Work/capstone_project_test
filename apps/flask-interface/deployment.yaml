@@ -51,7 +51,7 @@ spec:
     spec:
       containers:
       - name: flask-app
-        image: drpowell23/flask-ansible:v1.0.2
+        image: nej22/flask-ansible:v1.0.2
         imagePullPolicy: Always
         securityContext:
           runAsUser: 0
