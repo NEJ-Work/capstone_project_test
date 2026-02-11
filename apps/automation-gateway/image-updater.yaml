@@ -10,7 +10,7 @@ spec:
   writeBackConfig:
     method: "git"
     gitConfig:
-      repository: "https://github.com/nej22/capstone_project_test.git"
+      repository: "https://github.com/NEJ-Work/capstone_project_test.git"
       branch: "main"
       writeBackTarget: "kustomization:."
   applicationRefs:
