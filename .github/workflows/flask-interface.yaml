@@ -36,7 +36,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t drpowell23/flask-ansible:${{ env.TAG_NAME }} apps/flask-interface/src
+        run: docker build -t nej22/flask-ansible:${{ env.TAG_NAME }} apps/flask-interface/src
 
       - name: Push Docker image
-        run: docker push drpowell23/flask-ansible:${{ env.TAG_NAME }}
+        run: docker push nej22/flask-ansible:${{ env.TAG_NAME }}
