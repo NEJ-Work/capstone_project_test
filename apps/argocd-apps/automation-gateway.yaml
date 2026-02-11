@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: automation-gateway
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: automation-gateway=drpowell23/automation-gateway
+    argocd-image-updater.argoproj.io/automation-gateway.update-strategy: semver
+    argocd-image-updater.argoproj.io/automation-gateway.allow-tags: regexp:^v1\.
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/drpowell23-del/capstone_project.git
+    targetRevision: HEAD
+    path: apps/automation-gateway
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: automation-gateway
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

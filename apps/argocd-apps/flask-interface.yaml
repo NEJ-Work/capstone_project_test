@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: flask-interface
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: flask-ansible=drpowell23/flask-ansible
+    argocd-image-updater.argoproj.io/flask-ansible.update-strategy: semver
+    argocd-image-updater.argoproj.io/flask-ansible.allow-tags: regexp:^v1\.
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/drpowell23-del/capstone_project.git
+    targetRevision: HEAD
+    path: apps/flask-interface
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: flask-interface
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true

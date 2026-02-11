@@ -1,0 +1,20 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: flask-interface-updater
+  namespace: argocd
+spec:
+  namespace: argocd
+  commonUpdateSettings:
+    updateStrategy: "semver"
+  writeBackConfig:
+    method: "git"
+    gitConfig:
+      repository: "https://github.com/drpowell23-del/capstone_project.git"
+      branch: "main"
+      writeBackTarget: "kustomization:."
+  applicationRefs:
+    - namePattern: "flask-interface"
+      images:
+        - alias: "flask"
+          imageName: "drpowell23/flask-ansible:v1.x"

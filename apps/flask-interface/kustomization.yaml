@@ -3,5 +3,5 @@ kind: Kustomization
 resources:
   - deployment.yaml
 images:
-  - name: drpowell23/automation-gateway
-    newTag: v1.0.1
+  - name: drpowell23/flask-ansible
+    newTag: latest

@@ -58,7 +58,7 @@ spec:
     spec:
       containers:
         - name: automation-gateway
-          image: danblanco/automation-gateway-telemetry:latest  # Replace with your registry image
+          image: drpowell23/automation-gateway:latest  # Replace with your registry image
           imagePullPolicy: Always
           ports:
             - containerPort: 8000

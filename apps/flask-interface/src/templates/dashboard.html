@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card">
+    <h1>👋 Welcome, {{ username }}!</h1>
+
+    {% if message %}
+    <div class="alert alert-success">
+        ✓ {{ message }}
+    </div>
+    {% endif %}
+</div>
+
+<!-- Metrics Overview -->
+<div class="card">
+    <h2>📊 Ansible Job Metrics</h2>
+
+    <div class="grid">
+        <div class="stat-card">
+            <h3>Currently Running</h3>
+            <div class="stat-value" id="running-jobs">0</div>
+            <p style="opacity: 0.9;">Active Jobs</p>
+        </div>
+
+        <div class="stat-card" style="background: linear-gradient(135deg, #10b981, #059669);">
+            <h3>Total Jobs</h3>
+            <div class="stat-value" id="total-jobs-count">0</div>
+            <p style="opacity: 0.9;">All Time</p>
+        </div>
+    </div>
+
+    <h3 style="margin-top: 2rem;">📋 Job History</h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Playbook</th>
+                <th>Status</th>
+                <th>User</th>
+                <th>Count</th>
+            </tr>
+        </thead>
+        <tbody id="job-history">
+            <tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">Loading metrics...</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+function updateMetrics() {
+    fetch('/api/metrics/summary')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('running-jobs').textContent = data.running_jobs;
+
+            const totalCount = data.total_jobs.reduce((sum, job) => sum + job.count, 0);
+            document.getElementById('total-jobs-count').textContent = totalCount;
+
+            const tbody = document.getElementById('job-history');
+            if (data.total_jobs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-secondary);">No jobs run yet</td></tr>';
+            } else {
+                tbody.innerHTML = data.total_jobs.map(job => `
+                    <tr>
+                        <td><strong>${job.playbook}</strong></td>
+                        <td>
+                            <span class="badge ${job.status === 'successful' ? 'badge-success' : 'badge-danger'}">
+                                ${job.status === 'successful' ? '✓' : '✗'} ${job.status}
+                            </span>
+                        </td>
+                        <td>${job.user}</td>
+                        <td><strong>${job.count}</strong></td>
+                    </tr>
+                `).join('');
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching metrics:', error);
+        });
+}
+
+updateMetrics();
+setInterval(updateMetrics, 5000);
+</script>
+
+<!-- Run Playbook Section -->
+<div class="card">
+    <h2>🎯 Run Ansible Playbook</h2>
+    <form method="POST" action="{{ url_for('run_playbook_dashboard') }}">
+        <label for="playbook">Select Playbook</label>
+        <select name="playbook" id="playbook">
+            {% for pb in allowed_playbooks %}
+            <option value="{{ pb }}">{{ pb }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="extra_vars">Extra Variables (JSON)</label>
+        <input type="text" name="extra_vars" id="extra_vars" placeholder='{"key":"value"}'>
+
+        <button type="submit" class="btn btn-primary">▶️ Run Playbook</button>
+    </form>
+</div>
+
+<!-- API Keys Management -->
+<div class="card">
+    <h2>🔑 API Keys</h2>
+
+    {% if api_keys %}
+    <table>
+        <thead>
+            <tr>
+                <th>API Key Hash</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for key in api_keys %}
+            <tr>
+                <td><code style="font-size: 0.875rem;">{{ key[:32] }}...</code></td>
+                <td>
+                    <form method="post" action="/api/deletekey" style="display:inline;">
+                        <input type="hidden" name="api_key" value="{{ key }}">
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p style="color: var(--text-secondary);">No API keys created yet.</p>
+    {% endif %}
+
+    <form method="post" action="/api/newkey" style="margin-top: 1rem;">
+        <button type="submit" class="btn btn-primary">+ Create New API Key</button>
+    </form>
+</div>
+
+<!-- Account Settings -->
+<div class="card">
+    <h2>⚙️ Account Settings</h2>
+
+    <h3>Change Password</h3>
+    <form method="post" action="/chpasswd">
+        <label for="password">New Password</label>
+        <input type="password" name="password" id="password" placeholder="Enter new password" required>
+        <button type="submit" class="btn btn-primary">Update Password</button>
+    </form>
+</div>
+
+<!-- API Usage Information -->
+<div class="card">
+    <h2>📖 API Usage</h2>
+    <p>Use these headers when making API requests:</p>
+
+    <pre>Username: {{ username }}
+Authorization: Bearer &lt;API_KEY&gt;</pre>
+
+    <div class="alert alert-info">
+        <strong>ℹ️ Note:</strong> Keep your API keys secure. They provide full access to your account.
+    </div>
+</div>
+
+{% endblock %}

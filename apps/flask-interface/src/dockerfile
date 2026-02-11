@@ -1,0 +1,27 @@
+FROM python:3.11-slim
+
+# Install openssh-client for SSH connectivity to Ansible control node
+RUN apt-get update && \
+    apt-get install -y openssh-client && \
+    rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy requirements and install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY app.py .
+COPY templates/ templates/
+
+# Create directory for SSH keys (will be mounted as Kubernetes secret)
+RUN mkdir -p /secrets && chmod 700 /secrets
+
+# Non-root user for security
+RUN useradd -m -u 1000 appuser && chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8000
+
+CMD ["python", "app.py"]

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="card" style="text-align: center; padding: 3rem;">
+    <div style="font-size: 4rem; margin-bottom: 1rem;">🚀</div>
+    <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">Ansible Control Panel</h1>
+    <p style="font-size: 1.25rem; color: var(--text-secondary); margin-bottom: 2rem;">
+        Streamline your infrastructure automation with our powerful Kubernetes and Ansible integration platform
+    </p>
+
+    <a href="{{ url_for('login') }}" class="btn btn-primary" style="font-size: 1.1rem; padding: 1rem 2rem; color: white;">
+        🔐 Login to Dashboard
+    </a>
+</div>
+
+<div class="grid">
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚡</div>
+        <h3>Fast Deployment</h3>
+        <p style="color: var(--text-secondary);">Execute Ansible playbooks instantly with our streamlined interface</p>
+    </div>
+
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">📊</div>
+        <h3>Real-time Metrics</h3>
+        <p style="color: var(--text-secondary);">Monitor job execution with live Prometheus metrics and dashboards</p>
+    </div>
+
+    <div class="card" style="text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">🔒</div>
+        <h3>Secure Access</h3>
+        <p style="color: var(--text-secondary);">API key authentication and JWT-based session management</p>
+    </div>
+</div>
+
+<div class="card">
+    <h2>✨ Key Features</h2>
+    <ul style="list-style: none; padding: 0;">
+        <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+            <strong>🎯 Remote Playbook Execution</strong> - Run Ansible playbooks on remote control nodes via SSH
+        </li>
+        <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+            <strong>📈 Prometheus Integration</strong> - Track job metrics including duration, status, and user activity
+        </li>
+        <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+            <strong>🔑 API Key Management</strong> - Create and manage multiple API keys for programmatic access
+        </li>
+        <li style="padding: 0.75rem 0; border-bottom: 1px solid var(--border-color);">
+            <strong>🌐 RESTful API</strong> - Full REST API for automation and integration
+        </li>
+        <li style="padding: 0.75rem 0;">
+            <strong>☸️ Kubernetes Ready</strong> - Designed for deployment in Kubernetes environments
+        </li>
+    </ul>
+</div>
+
+{% endblock %}

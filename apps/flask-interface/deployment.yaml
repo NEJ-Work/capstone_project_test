@@ -1,0 +1,168 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: flask-interface
+---
+# SSH key secret is created via kubectl, not committed to git
+# kubectl create secret generic ansible-ssh-key --from-file=ssh-private-key=$HOME/.ssh/id_rsa --namespace=flask-interface
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: flask-ansible-config
+  namespace: flask-interface
+data:
+  ANSIBLE_CONTROL_NODE_HOST: "34.236.145.212"  # Replace with your EC2 IP (use private IP if same VPC)
+  ANSIBLE_CONTROL_NODE_USER: "ec2-user"
+  ANSIBLE_BASE_DIR: "/home/ec2-user/ansible"
+  ANSIBLE_PLAYBOOK_DIR: "/home/ec2-user/ansible/playbooks"
+  ANSIBLE_INVENTORY_PATH: "/home/ec2-user/ansible/inventory/inventory.yml"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: flask-secrets
+  namespace: flask-interface
+type: Opaque
+stringData:
+  HASH_SECRET: "dev-secret-change-me"  # Change in production
+  JWT_SECRET: "dev-secret-change-me"    # Change in production
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flask-ansible-app
+  namespace: flask-interface
+  labels:
+    app: flask-ansible
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flask-ansible
+  template:
+    metadata:
+      labels:
+        app: flask-ansible
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: flask-app
+        image: drpowell23/flask-ansible:v1.0.2
+        imagePullPolicy: Always
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+          name: http
+        env:
+        # Load from ConfigMap
+        - name: ANSIBLE_CONTROL_NODE_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: flask-ansible-config
+              key: ANSIBLE_CONTROL_NODE_HOST
+        - name: ANSIBLE_CONTROL_NODE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: flask-ansible-config
+              key: ANSIBLE_CONTROL_NODE_USER
+        - name: ANSIBLE_BASE_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: flask-ansible-config
+              key: ANSIBLE_BASE_DIR
+        - name: ANSIBLE_PLAYBOOK_DIR
+          valueFrom:
+            configMapKeyRef:
+              name: flask-ansible-config
+              key: ANSIBLE_PLAYBOOK_DIR
+        - name: ANSIBLE_INVENTORY_PATH
+          valueFrom:
+            configMapKeyRef:
+              name: flask-ansible-config
+              key: ANSIBLE_INVENTORY_PATH
+        # Load secrets
+        - name: HASH_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: flask-secrets
+              key: HASH_SECRET
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: flask-secrets
+              key: JWT_SECRET
+        - name: ANSIBLE_SSH_KEY_PATH
+          value: "/secrets/ssh-private-key"
+        volumeMounts:
+        - name: ssh-key
+          mountPath: /secrets
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+      volumes:
+      - name: ssh-key
+        secret:
+          secretName: ansible-ssh-key
+          defaultMode: 0400
+          items:
+          - key: ssh-private-key
+            path: ssh-private-key
+            mode: 0400
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-ansible
+  namespace: flask-interface
+  labels:
+    app: flask-ansible
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: 8000
+      name: http
+  selector:
+    app: flask-ansible
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flask-ansible-lb
+  namespace: flask-interface
+  labels:
+    app: flask-ansible
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8000
+      name: http
+  selector:
+    app: flask-ansible

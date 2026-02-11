@@ -22,25 +22,26 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 # Configuration via Environment Variables
 # ---------------------------------------------------------------------------
 
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
-    
+
     # MySQL
     mysql_host: str = "mysql"
     mysql_port: int = 3306
     mysql_user: str = "root"
     mysql_password: str = "rootpassword"
     mysql_database: str = "testdb"
-    
+
     # Redis
     redis_host: str = "redis"
     redis_port: int = 6379
     redis_password: Optional[str] = None
-    
+
     @property
     def database_url(self) -> str:
         return f"mysql+pymysql://{self.mysql_user}:{self.mysql_password}@{self.mysql_host}:{self.mysql_port}/{self.mysql_database}"
-    
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -53,22 +54,26 @@ settings = Settings()
 # Logging Configuration (OTel-safe)
 # ---------------------------------------------------------------------------
 
+
 class OTelSafeFormatter(logging.Formatter):
     """Formatter that safely includes OTel trace context if available."""
-    
+
     def format(self, record):
         # Add default values for OTel fields if not present
-        if not hasattr(record, 'otelTraceID'):
-            record.otelTraceID = '0'
-        if not hasattr(record, 'otelSpanID'):
-            record.otelSpanID = '0'
+        if not hasattr(record, "otelTraceID"):
+            record.otelTraceID = "0"
+        if not hasattr(record, "otelSpanID"):
+            record.otelSpanID = "0"
         return super().format(record)
+
 
 # Configure logging
 handler = logging.StreamHandler()
-handler.setFormatter(OTelSafeFormatter(
-    '%(asctime)s - %(levelname)s - %(name)s - [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] - %(message)s'
-))
+handler.setFormatter(
+    OTelSafeFormatter(
+        "%(asctime)s - %(levelname)s - %(name)s - [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s] - %(message)s"
+    )
+)
 
 logging.basicConfig(level=logging.INFO, handlers=[handler])
 logger = logging.getLogger("fastapi-app")
@@ -84,7 +89,7 @@ Base = declarative_base()
 
 class Item(Base):
     __tablename__ = "items"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(100), nullable=False)
     description = Column(String(500))
@@ -94,13 +99,14 @@ class Item(Base):
 # Redis Configuration
 # ---------------------------------------------------------------------------
 
+
 def get_redis_client() -> redis.Redis:
     """Create Redis client with settings."""
     return redis.Redis(
         host=settings.redis_host,
         port=settings.redis_port,
         password=settings.redis_password or None,
-        decode_responses=True
+        decode_responses=True,
     )
 
 
@@ -111,7 +117,7 @@ def get_redis_client() -> redis.Redis:
 app = FastAPI(
     title="Telemetry API",
     description="FastAPI with OpenTelemetry auto-instrumentation",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 # Prometheus metrics
@@ -122,11 +128,12 @@ Instrumentator().instrument(app).expose(app, endpoint="/metrics")
 # Startup Events
 # ---------------------------------------------------------------------------
 
+
 @app.on_event("startup")
 async def startup():
     """Initialize database and test connections."""
     logger.info("Starting application...")
-    
+
     # Test MySQL connection and create tables if available
     try:
         Base.metadata.create_all(bind=engine)
@@ -136,7 +143,7 @@ async def startup():
         logger.info("MySQL connection successful")
     except Exception as e:
         logger.warning(f"MySQL not available at startup (will retry on requests): {e}")
-    
+
     # Test Redis connection
     try:
         r = get_redis_client()
@@ -144,13 +151,14 @@ async def startup():
         logger.info("Redis connection successful")
     except Exception as e:
         logger.warning(f"Redis not available at startup (will retry on requests): {e}")
-    
+
     logger.info("Application started - endpoints ready")
 
 
 # ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
+
 
 @app.get("/")
 def root():
@@ -169,7 +177,7 @@ def health():
         mysql_status = "connected"
     except Exception:
         mysql_status = "disconnected"
-    
+
     # Check Redis
     try:
         r = get_redis_client()
@@ -177,15 +185,11 @@ def health():
         redis_status = "connected"
     except Exception:
         redis_status = "disconnected"
-    
-    return {
-        "status": "healthy",
-        "mysql": mysql_status,
-        "redis": redis_status
-    }
+
+    return {"status": "healthy", "mysql": mysql_status, "redis": redis_status}
 
 
-@app.get("/items")
+@app.get("/test-jobs-v1.3")
 def get_items():
     """Get all items."""
     logger.info("Fetching all items")
@@ -193,7 +197,12 @@ def get_items():
         db = SessionLocal()
         try:
             items = db.query(Item).all()
-            return {"items": [{"id": i.id, "name": i.name, "description": i.description} for i in items]}
+            return {
+                "items": [
+                    {"id": i.id, "name": i.name, "description": i.description}
+                    for i in items
+                ]
+            }
         finally:
             db.close()
     except Exception as e:
@@ -220,10 +229,6 @@ def get_item(item_id: int):
     except Exception as e:
         logger.error(f"MySQL error: {e}")
         raise HTTPException(status_code=503, detail="MySQL unavailable")
-
-@app.post("/v1/jobs")
-def create_job(action: str, target: str, requested_by: str):
-    """Create a job that can handle restart_service, rotate_config, and health_check actions."""
 
 
 @app.post("/items")
@@ -265,7 +270,7 @@ def error_endpoint():
 def random_endpoint():
     """Generate random log levels."""
     level = random.choice(["debug", "info", "warning", "error"])
-    
+
     if level == "debug":
         logger.debug("Random debug message")
     elif level == "info":
@@ -274,13 +279,14 @@ def random_endpoint():
         logger.warning("Random warning message")
     else:
         logger.error("Random error message")
-    
+
     return {"log_level": level}
 
 
 # ---------------------------------------------------------------------------
 # Redis Endpoints
 # ---------------------------------------------------------------------------
+
 
 @app.get("/cache/{key}")
 def cache_get(key: str):
@@ -357,9 +363,11 @@ def cache_stats():
             "keyspace_hits": info.get("keyspace_hits", 0),
             "keyspace_misses": info.get("keyspace_misses", 0),
             "hit_rate": round(
-                info.get("keyspace_hits", 0) / 
-                max(info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0), 1) * 100, 2
-            )
+                info.get("keyspace_hits", 0)
+                / max(info.get("keyspace_hits", 0) + info.get("keyspace_misses", 0), 1)
+                * 100,
+                2,
+            ),
         }
     except (redis.RedisError, redis.ConnectionError) as e:
         logger.error(f"Redis unavailable: {e}")
