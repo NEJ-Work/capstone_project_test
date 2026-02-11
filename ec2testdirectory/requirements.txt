@@ -1,5 +1,0 @@
-flask
-psutil
-PyJWT
-ansible-runner
-prometheus-client
