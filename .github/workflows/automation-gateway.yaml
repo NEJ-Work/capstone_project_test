@@ -36,7 +36,7 @@ jobs:
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build Docker image
-        run: docker build -t drpowell23/automation-gateway:${{ env.TAG_NAME }} apps/automation-gateway/src
+        run: docker build -t nej22/automation-gateway:${{ env.TAG_NAME }} apps/automation-gateway/src
 
       - name: Push Docker image
-        run: docker push drpowell23/automation-gateway:${{ env.TAG_NAME }}
+        run: docker push nej22/automation-gateway:${{ env.TAG_NAME }}
