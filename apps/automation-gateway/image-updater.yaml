@@ -10,7 +10,7 @@ spec:
   writeBackConfig:
     method: "git"
     gitConfig:
-      repository: "https://github.com/drpowell23-del/capstone_project.git"
+      repository: "https://github.com/nej22/capstone_project_test.git"
       branch: "main"
       writeBackTarget: "kustomization:."
   applicationRefs:
@@ -18,4 +18,4 @@ spec:
       images:
         - alias: "api"
 
-          imageName: "drpowell23/automation-gateway:v1.x"
+          imageName: "nej22/automation-gateway:v1.x"
